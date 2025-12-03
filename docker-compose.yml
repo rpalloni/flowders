@@ -1,0 +1,223 @@
+services:
+#  ====================================== producer ====================================
+  producer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: producer
+    image: producer
+    command: uv run -m flowders
+    networks:
+      - kafka_network
+
+# ====================================== KAFKA 4.1.0 =======================================
+  # topic and partitions setup
+  # otherwise topic default creation with 1 partition is done by KafkaProducer at runtime
+  kafka-init:
+    image: apache/kafka:4.1.0
+    container_name: kafka-init
+    environment:
+      KAFKA_LOG4J_ROOT_LOGLEVEL: ERROR # set logger level to WARN
+    ports:
+      - "9095:9092"
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
+    networks:
+      - kafka_network
+    command: >
+      sh -c "/opt/kafka/bin/kafka-topics.sh --create --topic orders --partitions 10 --replication-factor 2 --bootstrap-server kafka1:9092,kafka2:9092,kafka3:9092"
+
+  kafka1:
+    image: apache/kafka:4.1.0
+    container_name: kafka1
+    environment:
+      KAFKA_KRAFT_MODE: 'true' # no more zookeeper to manage brokers
+      KAFKA_CLUSTER_ID: "5L6g3nShT-eMCtK--X86sw"  # or generate with kafka-storage tool
+      KAFKA_BROKER_ID: 1
+      KAFKA_NODE_ID: 1
+
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN # set logger level to WARN
+      
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka1-data:/var/lib/kafka/data
+    networks:
+      - kafka_network
+
+  kafka2:
+    image: apache/kafka:4.1.0
+    container_name: kafka2
+    environment:
+      KAFKA_KRAFT_MODE: 'true' # no more zookeeper to manage brokers
+      KAFKA_CLUSTER_ID: "5L6g3nShT-eMCtK--X86sw"
+      KAFKA_BROKER_ID: 2
+      KAFKA_NODE_ID: 2
+
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN # set logger level to WARN
+      
+    ports:
+      - "9093:9092"
+    volumes:
+      - kafka2-data:/var/lib/kafka/data
+    networks:
+      - kafka_network
+
+  kafka3:
+    image: apache/kafka:4.1.0
+    container_name: kafka3
+    environment:
+      KAFKA_KRAFT_MODE: 'true' # no more zookeeper to manage brokers
+      KAFKA_CLUSTER_ID: "5L6g3nShT-eMCtK--X86sw"
+      KAFKA_BROKER_ID: 3
+      KAFKA_NODE_ID: 3
+
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka3:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN # set logger level to WARN
+      
+    ports:
+      - "9094:9092"
+    volumes:
+      - kafka3-data:/var/lib/kafka/data
+    networks:
+      - kafka_network
+
+  kafka-ui:
+    container_name: kafkaui
+    image: ghcr.io/kafbat/kafka-ui:latest
+    ports:
+      - 8888:8080
+    environment:
+      DYNAMIC_CONFIG_ENABLED: "true"
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:9092,kafka2:9092,kafka3:9092 # address where to connect
+      SPRING_CONFIG_ADDITIONAL_LOCATION: /config.yml
+    volumes:
+      - ./kafka-ui-config.yml:/config.yml # set logger level to WARN
+    networks:
+      - kafka_network
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
+
+# ====================================== SPARK 4.0.0 =======================================
+# Spark cluster running in standalone cluster mode
+# orchestrating master and worker nodes as separate containers within a standalone cluster
+# managed by Spark's built-in native cluster manager
+  spark-master:
+    image: apache/spark:4.0.0
+    container_name: spark-master
+    hostname: spark-master
+    ports:
+      - "8090:8080" # Spark Master UI
+      - "7077:7077" # Spark Master Port for worker communication
+    environment:
+      - SPARK_MODE=master
+    command: >
+      bash -c "/opt/spark/sbin/start-master.sh --host spark-master --port 7077 --webui-port 8080 && tail -f /dev/null"
+    volumes:
+      - ./src:/opt/spark/src:rw
+    networks:
+      - spark_network # enable comms between the master and workers
+      - kafka_network # enable comms between spark and kafka containers
+
+  spark-worker-1:
+    image: apache/spark:4.0.0
+    container_name: spark-worker-1
+    hostname: spark-worker-1
+    ports:
+      - "8091:8081" # Spark Worker1 UI
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    command: >
+      bash -c "/opt/spark/sbin/start-worker.sh spark://spark-master:7077 && tail -f /dev/null"
+    depends_on:
+      - spark-master
+    networks:
+      - spark_network # enable comms between the master and workers
+      - kafka_network # enable comms between spark and kafka containers
+
+  spark-worker-2:
+    image: apache/spark:4.0.0
+    container_name: spark-worker-2
+    hostname: spark-worker-2
+    ports:
+      - "8092:8082" # Spark Worker2 UI
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    command: >
+      bash -c "/opt/spark/sbin/start-worker.sh spark://spark-master:7077 && tail -f /dev/null"
+    depends_on:
+      - spark-master
+    networks:
+      - spark_network # enable comms between the master and workers
+      - kafka_network # enable comms between spark and kafka containers
+
+  spark-submit:
+    image: apache/spark:4.0.0
+    container_name: spark-submit
+    ports:
+      - "4040:4040" # Spark App UI
+    user: root
+    working_dir: /opt/spark
+    volumes:
+      - ./src:/opt/spark/src:rw
+    depends_on:
+      - spark-master
+      - kafka1
+      - kafka2
+      - kafka3
+    command: >
+      /opt/spark/bin/spark-submit
+      --master spark://spark-master:7077
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.13:4.0.0
+      src/flowders/aggregator.py
+    networks:
+      - spark_network
+      - kafka_network
+
+
+networks:
+  spark_network:
+    name: spark_network
+    driver: bridge
+  kafka_network:
+    name: kafka_network
+    driver: bridge
+
+
+volumes:
+  kafka1-data:
+  kafka2-data:
+  kafka3-data:

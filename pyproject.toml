@@ -1,0 +1,18 @@
+[project]
+name = "flowders"
+version = "0.1.0"
+description = "Flow of orders to kafka and spark streaming"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "kafka-python-ng>=2.2.3",
+    "pydantic>=2.11.7",
+    "pyspark>=4.0.0",
+]
+
+[project.scripts]
+flowders = "flowders:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
