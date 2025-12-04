@@ -7,7 +7,7 @@ Spark cluster with 2 workers and 4 executors reads the kafka streaming from topi
 
 
 Input example:
-
+```
 {"order_id":4444,"customer_id":CUS_60,"amount":608.21,"timestamp":"2025-09-22T19:27:05.425770"}
 {"order_id":3560,"customer_id":CUS_60,"amount":204.67,"timestamp":"2025-09-22T19:27:11.433860"}
 {"order_id":7517,"customer_id":CUS_58,"amount":322.45,"timestamp":"2025-09-22T19:27:20.438745"}
@@ -17,6 +17,7 @@ Input example:
 {"order_id":2549,"customer_id":CUS_50,"amount":616.46,"timestamp":"2025-09-22T19:27:48.461685"}
 {"order_id":2662,"customer_id":CUS_57,"amount":757.36,"timestamp":"2025-09-22T19:27:51.465676"}
 {"order_id":8961,"customer_id":CUS_54,"amount":327.33,"timestamp":"2025-09-22T19:27:57.471678"}
+```
 
 Output example:
 ```
@@ -40,12 +41,12 @@ Kafka UI: localhost:8888
 
 <img width="1204" height="364" alt="image" src="https://github.com/user-attachments/assets/89f0ef9b-5208-4835-848b-3ffc8751903c" />
 
-
+<br>
 Spark App UI: localhost:4040
 
 <img width="1200" height="697" alt="image" src="https://github.com/user-attachments/assets/f5734054-7383-4c4e-ad59-9faf7710dd59" />
 
-
+<br>
 Spark Master UI: localhost:8090
 
 <img width="1197" height="463" alt="image" src="https://github.com/user-attachments/assets/ca6bbc64-5a9a-4337-aee3-26885513be1f" />
