@@ -3,7 +3,7 @@ A simple project where a producer generates random orders data and send them to 
 There are 3 brokers and one 'orders' topic with 10 partitions, one for each customer (partition key).
 Spark cluster with 2 workers and 4 executors reads the kafka streaming from topic and calculates aggregations per customer every minute.
 
-<img width="608" height="147" alt="image" src="https://github.com/user-attachments/assets/fa17f364-2797-415a-98b2-63807b3ed2b5" />
+<p align="center"><img width="608" height="147" alt="image" src="https://github.com/user-attachments/assets/fa17f364-2797-415a-98b2-63807b3ed2b5" /></p>
 
 
 Input example:
@@ -41,12 +41,12 @@ Kafka UI: localhost:8888
 
 <img width="1204" height="364" alt="image" src="https://github.com/user-attachments/assets/89f0ef9b-5208-4835-848b-3ffc8751903c" />
 
-<br>
+
 Spark App UI: localhost:4040
 
 <img width="1200" height="697" alt="image" src="https://github.com/user-attachments/assets/f5734054-7383-4c4e-ad59-9faf7710dd59" />
 
-<br>
+
 Spark Master UI: localhost:8090
 
 <img width="1197" height="463" alt="image" src="https://github.com/user-attachments/assets/ca6bbc64-5a9a-4337-aee3-26885513be1f" />
