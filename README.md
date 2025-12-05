@@ -1,4 +1,4 @@
-### Flow of orders - flowders
+# Flow of orders - flowders
 A simple project where a producer generates random orders data and send them to a kafka cluster (KRaft).
 There are 3 brokers and one 'orders' topic with 10 partitions, one for each customer (partition key).
 Spark cluster with 2 workers and 4 executors reads the kafka streaming from topic and calculates aggregations per customer every minute.
@@ -55,7 +55,7 @@ Spark Master UI: localhost:8090
 ### Run project
 `docker compose up --build`
 
-# kafka CLI
+### kafka CLI
 You can use any of the broker as bootstrap broker to access the cluster:
 `docker compose exec kafka1 bash`
 
