@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "kafka-python-ng>=2.2.3",
+    "murmurhash2>=0.2.10",
     "pydantic>=2.11.7",
     "pyspark>=4.0.0",
 ]

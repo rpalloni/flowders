@@ -10,10 +10,10 @@ class Order(BaseModel):
     timestamp: datetime
 
 
-def generate_order() -> str:
+def generate_order(list_customer_id: list[str]) -> str:
     order = Order(
         order_id = random.randint(1000,9999),
-        customer_id = 'CUS_' + str(random.randint(50,60)),
+        customer_id = random.choice(list_customer_id),
         amount = round(random.uniform(10.0,1000.0),2),
         timestamp = datetime.now()
     )

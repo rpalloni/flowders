@@ -7,6 +7,13 @@ services:
     container_name: producer
     image: producer
     command: uv run -m flowders
+    depends_on:
+      kafka1:
+        condition: service_healthy 
+      kafka2:
+        condition: service_healthy 
+      kafka3:
+        condition: service_healthy 
     networks:
       - kafka_network
 
@@ -18,16 +25,17 @@ services:
     container_name: kafka-init
     environment:
       KAFKA_LOG4J_ROOT_LOGLEVEL: ERROR # set logger level to WARN
-    ports:
-      - "9095:9092"
     depends_on:
-      - kafka1
-      - kafka2
-      - kafka3
+      kafka1:
+        condition: service_healthy 
+      kafka2:
+        condition: service_healthy 
+      kafka3:
+        condition: service_healthy 
     networks:
       - kafka_network
     command: >
-      sh -c "/opt/kafka/bin/kafka-topics.sh --create --topic orders --partitions 10 --replication-factor 2 --bootstrap-server kafka1:9092,kafka2:9092,kafka3:9092"
+      sh -c "/opt/kafka/bin/kafka-topics.sh --create --topic orders --partitions 10 --replication-factor 2 --bootstrap-server kafka1:9092,kafka2:9092,kafka3:9092 && exit 0"
 
   kafka1:
     image: apache/kafka:4.1.0
@@ -42,10 +50,11 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
 
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:9092
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka1:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT
 
       KAFKA_LOG4J_ROOT_LOGLEVEL: WARN # set logger level to WARN
       
@@ -55,6 +64,17 @@ services:
       - kafka1-data:/var/lib/kafka/data
     networks:
       - kafka_network
+    
+    healthcheck:
+      # test container OWN (localhost) port 9092: only waits for the port to open but doesn't guarantee the Kafka cluster is fully ready!
+      # test: sh -c "nc -z localhost 9092 || exit 1"
+
+      # tests if the Kafka broker is fully ready by querying its supported API versions, then discards all output
+      test: sh -c "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1 || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s # Kafka broker takes 20-60 seconds to fully initialize (KRAFT cluster formation, controller election, etc)
 
   kafka2:
     image: apache/kafka:4.1.0
@@ -69,10 +89,11 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
 
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:9092
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka2:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT
 
       KAFKA_LOG4J_ROOT_LOGLEVEL: WARN # set logger level to WARN
       
@@ -82,6 +103,13 @@ services:
       - kafka2-data:/var/lib/kafka/data
     networks:
       - kafka_network
+
+    healthcheck:
+      test: sh -c "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1 || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s # Kafka broker takes 20-60 seconds to fully initialize (KRAFT cluster formation, controller election, etc)
 
   kafka3:
     image: apache/kafka:4.1.0
@@ -96,10 +124,11 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
 
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka3:9092
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka3:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT
 
       KAFKA_LOG4J_ROOT_LOGLEVEL: WARN # set logger level to WARN
       
@@ -109,6 +138,13 @@ services:
       - kafka3-data:/var/lib/kafka/data
     networks:
       - kafka_network
+
+    healthcheck:
+      test: sh -c "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1 || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s # Kafka broker takes 20-60 seconds to fully initialize (KRAFT cluster formation, controller election, etc)
 
   kafka-ui:
     container_name: kafkaui
@@ -125,9 +161,12 @@ services:
     networks:
       - kafka_network
     depends_on:
-      - kafka1
-      - kafka2
-      - kafka3
+      kafka1:
+        condition: service_healthy 
+      kafka2:
+        condition: service_healthy 
+      kafka3:
+        condition: service_healthy 
 
 # ====================================== SPARK 4.0.0 =======================================
 # Spark cluster running in standalone cluster mode
@@ -138,7 +177,7 @@ services:
     container_name: spark-master
     hostname: spark-master
     ports:
-      - "8090:8080" # Spark Master UI
+      - "8080:8080" # Spark Master UI
       - "7077:7077" # Spark Master Port for worker communication
     environment:
       - SPARK_MODE=master
@@ -155,10 +194,11 @@ services:
     container_name: spark-worker-1
     hostname: spark-worker-1
     ports:
-      - "8091:8081" # Spark Worker1 UI
+      - "8081:8081" # Spark Worker1 UI
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_WEBUI_PORT=8081
     command: >
       bash -c "/opt/spark/sbin/start-worker.sh spark://spark-master:7077 && tail -f /dev/null"
     depends_on:
@@ -172,10 +212,11 @@ services:
     container_name: spark-worker-2
     hostname: spark-worker-2
     ports:
-      - "8092:8082" # Spark Worker2 UI
+      - "8082:8082" # Spark Worker2 UI
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_WEBUI_PORT=8082
     command: >
       bash -c "/opt/spark/sbin/start-worker.sh spark://spark-master:7077 && tail -f /dev/null"
     depends_on:
@@ -194,10 +235,12 @@ services:
     volumes:
       - ./src:/opt/spark/src:rw
     depends_on:
-      - spark-master
-      - kafka1
-      - kafka2
-      - kafka3
+      kafka1:
+        condition: service_healthy 
+      kafka2:
+        condition: service_healthy 
+      kafka3:
+        condition: service_healthy 
     command: >
       /opt/spark/bin/spark-submit
       --master spark://spark-master:7077
