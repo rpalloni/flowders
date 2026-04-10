@@ -67,5 +67,8 @@ You can use any of the broker as bootstrap broker to access the cluster:
 
 `/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --partition 5  --from-beginning`
 
+### Deep dive on Kafka hashing and partition key
+see `src/flowders/hashcheck.py`
+
 ### Coming soon
 Sink to Apache Iceberg
