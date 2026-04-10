@@ -7,11 +7,19 @@ Kafka computes a deterministic hash (Murmur2) on the key bytes, then applies mod
     partition = hash(key) % num_partitions
 Same key bytes yield the same hash and thus the same partition every time so same key are routed to same partition
 
+Collision:
 Sequential keys like "CUS_50" to "CUS_60" produce similar hash values due to their patterned structure
-("CUS_" prefix + close numbers), causing multiple to map to the same partition after the modulo 10 operation
-Close sequential suffixes yield hashes that collide post-modulo with n keys per partition
+("CUS_" prefix + close numbers), causing multiple customers to map to the same partition after the modulo 10 operation,
+i.e. close sequential suffixes yield hashes that collide post-modulo with n keys per partition.
 This is not an issue as, despite there are several keys within the same partition, same key messages are ordered
-even if not necessarily one after the other
+even if not necessarily one after the other.
+
+Hotspotting:
+A key concern is ensuring that "concentration" does not happen only within few partition, keeping the others idle,
+i.e. a disproportionate number of messages delivered to one partition.
+
+Partition key should balance the need of keeping "related" messages within the same partition to ease read and processing
+with the need to distribute messages evenly across partitions.
 '''
 
 seed = 123
