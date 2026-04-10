@@ -3,19 +3,19 @@ import string
 from murmurhash2 import murmurhash2
 
 '''
-Kafka computes a deterministic hash (Murmur2) on the key bytes, then applies modulo the partition count: 
+Kafka computes a deterministic hash (Murmur2) on the key bytes, then applies modulo with partition count: 
     partition = hash(key) % num_partitions
-Same key bytes yield the same hash and thus the same partition every time so same key are routed to same partition
+Same key bytes yield the same hash and thus the same partition every time; so same key are routed to same partition
 
 Collision:
 Sequential keys like "CUS_50" to "CUS_60" produce similar hash values due to their patterned structure
 ("CUS_" prefix + close numbers), causing multiple customers to map to the same partition after the modulo 10 operation,
 i.e. close sequential suffixes yield hashes that collide post-modulo with n keys per partition.
-This is not an issue as, despite there are several keys within the same partition, same key messages are ordered
+This is not an issue per se: despite there are several keys within the same partition, same key messages are ordered
 even if not necessarily one after the other.
 
 Hotspotting:
-A key concern is ensuring that "concentration" does not happen only within few partition, keeping the others idle,
+A key concern is ensuring that "concentration" does not happen only within few partitions while keeping the others idle,
 i.e. a disproportionate number of messages delivered to one partition.
 
 Partition key should balance the need of keeping "related" messages within the same partition to ease read and processing
