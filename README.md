@@ -59,13 +59,12 @@ Spark Worker2 UI: localhost:8082
 
 ### kafka CLI
 You can use any of the broker as bootstrap broker to access the cluster:
-`docker compose exec kafka1 bash`
-
-`/opt/kafka/bin/kafka-topics.sh --list --bootstrap-server kafka1:9092`
-
-`/opt/kafka/bin/kafka-topics.sh --describe --topic orders --bootstrap-server kafka1:9092`
-
-`/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --partition 5  --from-beginning`
+```
+docker compose exec kafka1 bash
+/opt/kafka/bin/kafka-topics.sh --list --bootstrap-server kafka1:9092
+/opt/kafka/bin/kafka-topics.sh --describe --topic orders --bootstrap-server kafka1:9092
+/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --partition 5  --from-beginning
+```
 
 ### Deep dive on Kafka hashing and partition key
 see `src/flowders/hashcheck.py`
